@@ -1,3 +1,4 @@
+require("dotenv").config(); //always place it at the top
 const mongoose = require("mongoose");
 const validator = require("validator");
 const bcrypt = require("bcryptjs");
@@ -36,7 +37,7 @@ userSchema.methods.generateAuthToken = async function () {
     console.log(this._id);
     const token = jwt.sign(
       { _id: this._id.toString() },
-      "mynameismuhammadfareedjaved"
+      process.env.SECRET_KEY //to add security so public dont see our secret key, it is written in .env file
     );
     this.tokens = this.tokens.concat({ token: token }); //saving the token value in token field
     await this.save();
