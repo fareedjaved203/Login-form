@@ -8,9 +8,11 @@ const bcrypt = require("bcryptjs");
 require("./db/conn");
 const Register = require("./models/signup");
 const jwt = require("jsonwebtoken");
+const cookieParser = require("cookie-parser");
 
 app.use(express.json()); //to understand the incoming json data (from postman)
 app.use(express.urlencoded({ extended: false })); //to get the form value data
+app.use(cookieParser()); //to use cookie-parser middleware to get cookie
 
 const staticPath = path.join(__dirname, "../public"); //to get css and js files
 const templatePath = path.join(__dirname, "../templates/views");
@@ -23,6 +25,11 @@ hbs.registerPartials(partialPath);
 
 app.get("/", (req, res) => {
   res.render("index");
+});
+
+app.get("/secretpage", (req, res) => {
+  console.log(`cookie is: ${req.cookies.jwt}`); //to get the cookie value using cookie-parser, it will show undefined when cookie expires else it will show the token No.
+  res.render("secretpage");
 });
 
 app.get("/login", (req, res) => {
@@ -44,6 +51,12 @@ app.post("/signup", async (req, res) => {
     const token = await registerUser.generateAuthToken();
     console.log(`the token part ${token}`);
 
+    res.cookie("jwt", token, {
+      //jwt is set the name of the cookie
+      expires: new Date(Date.now() + 30000), //expires in 3 sec w.r.t current date
+      httpOnly: true, //so cookies can't be modified by Js
+    });
+
     const saveUser = await registerUser.save();
     console.log(`the page part ${saveUser}`);
     res.status(201).render("index");
@@ -63,6 +76,13 @@ app.post("/login", async (req, res) => {
     console.log(`the token part ${token}`);
 
     const isMatch = await bcrypt.compare(inputPassword, id.password); //to match the bcrypt hashed password-returns true/false
+
+    res.cookie("jwt", token, {
+      //jwt is set the name of the cookie
+      expires: new Date(Date.now() + 50000), //expires in 3 sec w.r.t current date
+      httpOnly: true, //so cookies can't be modified by Js
+      // secure: true, //cookie will be visible only in https connection
+    });
 
     if (isMatch) {
       res.status(201).render("index");
