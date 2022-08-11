@@ -6,6 +6,7 @@ const hbs = require("hbs");
 const bcrypt = require("bcryptjs");
 require("./db/conn");
 const Register = require("./models/signup");
+const jwt = require("jsonwebtoken");
 
 app.use(express.json()); //to understand the incoming json data (from postman)
 app.use(express.urlencoded({ extended: false })); //to get the form value data
@@ -37,7 +38,13 @@ app.post("/signup", async (req, res) => {
       email: req.body.email,
       password: req.body.password,
     });
+
+    //getting the generated token
+    const token = await registerUser.generateAuthToken();
+    console.log(`the token part ${token}`);
+
     const saveUser = await registerUser.save();
+    console.log(`the page part ${saveUser}`);
     res.status(201).render("index");
   } catch (error) {
     res.status(400).send(error);
@@ -46,10 +53,13 @@ app.post("/signup", async (req, res) => {
 
 app.post("/login", async (req, res) => {
   try {
-    const inputEmail = req.body.email;
+    const inputEmail = req.body.email; //user input data
     const inputPassword = req.body.password;
 
-    const id = await Register.findOne({ email: inputEmail }); //array destructuring is used, found data can be used by id e.g. id.email, id becomes the object here
+    const id = await Register.findOne({ email: inputEmail }); //array destructuring is used, found data can be used by id e.g. id.email, id becomes the object(instance) here
+
+    const token = await id.generateAuthToken(); //id is the instance
+    console.log(`the token part ${token}`);
 
     const isMatch = await bcrypt.compare(inputPassword, id.password); //to match the bcrypt hashed password-returns true/false
 
