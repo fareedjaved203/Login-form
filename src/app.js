@@ -9,6 +9,7 @@ require("./db/conn");
 const Register = require("./models/signup");
 const jwt = require("jsonwebtoken");
 const cookieParser = require("cookie-parser");
+const auth = require("./middleware/auth");
 
 app.use(express.json()); //to understand the incoming json data (from postman)
 app.use(express.urlencoded({ extended: false })); //to get the form value data
@@ -27,9 +28,56 @@ app.get("/", (req, res) => {
   res.render("index");
 });
 
-app.get("/secretpage", (req, res) => {
+app.get("/secretpage", auth, (req, res) => {
+  //auth (middleware) verifies the user with the help of cookies + jwt, and this page will only be displayed to him
+  //when the token expires, this page won't be visible
   console.log(`cookie is: ${req.cookies.jwt}`); //to get the cookie value using cookie-parser, it will show undefined when cookie expires else it will show the token No.
   res.render("secretpage");
+});
+
+app.get("/logout", auth, async (req, res) => {
+  //with auth, it will check if token/ cookie is available or not
+  try {
+    console.log("This is req.user= " + req.user); //the one who logs in
+
+    //to logout from the current device only!
+
+    req.user.tokens = req.user.tokens.filter((currentElement) => {
+      return currentElement.token != req.token;
+    });
+
+    //In filter() method we are removing the current token from the database bcoz each time the same user logs in, a token is stored in the database, so when he logs out, that needs to be deleted
+    //req.user.token is the database tokens
+    //currentElement.token is the current token in database
+    //req.token is the token stored in the cookie
+
+    res.clearCookie("jwt"); //to delete the stored cookie named jwt
+    console.log("logout successful");
+
+    await req.user.save();
+    res.render("login");
+  } catch (error) {
+    res.status(500).send(error);
+  }
+});
+
+app.get("/logoutall", auth, async (req, res) => {
+  //with auth, it will check if token/ cookie is available or not
+  try {
+    console.log("This is req.user= " + req.user); //the one who logs in
+
+    //to logout from all devices!
+
+    req.user.tokens = []; //tokens field in DB gets empty
+
+    res.clearCookie("jwt"); //to delete the stored cookie named jwt
+    console.log("logout successful");
+
+    await req.user.save();
+    res.render("login");
+  } catch (error) {
+    res.status(500).send(error);
+  }
 });
 
 app.get("/login", (req, res) => {
